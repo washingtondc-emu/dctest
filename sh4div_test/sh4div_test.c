@@ -50,14 +50,20 @@ static void invalidate_icache(void) {
     uint32_t ccr_tmp = *ccr;
     ccr_tmp |= (1 << 11); // invalidate cache
     *ccr = ccr_tmp;
-    asm("nop\n");
-    asm("nop\n");
-    asm("nop\n");
-    asm("nop\n");
-    asm("nop\n");
-    asm("nop\n");
-    asm("nop\n");
-    asm("nop\n");
+
+    /*
+     * the official sh4 hardware manual you have to wait at least 8
+     * instructions after invalidating the icache before you can branch
+     */
+    asm volatile (
+        "nop\n"
+        "nop\n"
+        "nop\n"
+        "nop\n"
+        "nop\n"
+        "nop\n"
+        "nop\n"
+        "nop\n");
 }
 
 static void refresh_inst_list(void) {
@@ -132,6 +138,7 @@ static int unsigned_div_test_32_16(void) {
     quotient = dividend / divisor;
     printf("the expected result is %u\n", (unsigned)quotient);
 
+    clear_jit();
     sh4asm_input_string(prog_asm);
     refresh_inst_list();
 
@@ -139,12 +146,107 @@ static int unsigned_div_test_32_16(void) {
     unsigned actual_quotient = func_ptr(dividend, divisor);
     printf("the actual result is %u\n", actual_quotient);
 
-    return 0;
+    return actual_quotient == quotient;
 }
+
+static int signed_div_test_16_16(void) {
+    static char const *prog_asm =
+        /*
+         * old test: divisor goes into r1, dividend goes into r2
+         * new test: divisor goes into r5, dividend goes into r4
+         */
+        "shll16 r5\n"
+        "exts.w r4, r4\n"
+        "xor r0, r0\n"
+        "mov r4, r3\n"
+        "rotcl r3\n"
+        "subc r0, r4\n"
+
+        "div0s r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+        "div1 r5, r4\n"
+
+        "exts.w r4, r4\n"
+        "rotcl r4\n"
+        "addc r0, r4\n"
+        "rts\n"
+        "exts.w r4, r0\n";
+
+    /*
+     * pick random 16-bit signed integers.
+     * this is less complicated than it looks.
+     */
+    uint32_t dividend, divisor, quotient;
+
+    do {
+        dividend = rand();
+        divisor = rand();
+
+        uint32_t dividend_sign = dividend & 0x8000;
+        if (dividend_sign)
+            dividend |= ~0xffff;
+        else
+            dividend &= 0xffff;
+        uint32_t divisor_sign = divisor & 0x8000;
+        if (divisor_sign)
+            divisor |= ~0xffff;
+        else
+            divisor &= 0xffff;
+    } while (!divisor);
+
+    /*
+     * XXX: you can't actually rely on the expected quotient here to validate
+     * results since that may very well turn out to use the exact same opcodes
+     * as the generated asm
+     */
+    quotient = (int32_t)dividend / (int32_t)divisor;
+    printf("%d / %d\n", (int)dividend, (int)divisor);
+    printf("the expected result is %d\n", (int)quotient);
+
+    clear_jit();
+    sh4asm_input_string(prog_asm);
+    refresh_inst_list();
+
+    test_fn func_ptr = (test_fn)inst_list;
+    int32_t actual_quotient = func_ptr(dividend, divisor);
+    printf("the actual result is %d\n", (int)actual_quotient);
+
+    return actual_quotient == quotient;
+}
+
+#define N_TRIALS 8
 
 int main(int argc, char **argv) {
     sh4asm_set_emitter(emit_fn);
-    unsigned_div_test_32_16();
+    unsigned trial_no;
+    unsigned n_success = 0;
+    printf("attempting $d trials\n", N_TRIALS);
+    printf("==== unsigned_div_test_32_16 ====\n");
+    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
+        n_success += unsigned_div_test_32_16();
+        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+    }
+    printf("==== signed_div_test_16_16 ====\n");
+    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
+        n_success += signed_div_test_16_16();
+        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+    }
+
+    printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 2);
 
     return 0;
 }
