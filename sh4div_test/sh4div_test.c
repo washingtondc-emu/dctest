@@ -446,26 +446,31 @@ int main(int argc, char **argv) {
     sh4asm_set_emitter(emit_fn);
     unsigned trial_no;
     unsigned n_success = 0;
+    int res;
     printf("attempting %d trials\n", N_TRIALS);
     printf("==== unsigned_div_test_32_16 ====\n");
     for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        n_success += unsigned_div_test_32_16();
-        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+        res = unsigned_div_test_32_16();
+        n_success += res;
+        printf(res ? "SUCCESS\n" : "FAILURE\n");
     }
     printf("==== signed_div_test_16_16 ====\n");
     for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        n_success += signed_div_test_16_16();
-        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+        res = signed_div_test_16_16();
+        n_success += res;
+        printf(res ? "SUCCESS\n" : "FAILURE\n");
     }
     printf("==== signed_div_test_32_32 ====\n");
     for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        n_success += signed_div_test_32_32();
-        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+        res = signed_div_test_32_32();
+        n_success += res;
+        printf(res ? "SUCCESS\n" : "FAILURE\n");
     }
     printf("==== unsigned_div_test_64_32 ====\n");
     for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        n_success += unsigned_div_test_64_32();
-        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+        res = unsigned_div_test_64_32();
+        n_success += res;
+        printf(res ? "SUCCESS\n" : "FAILURE\n");
     }
     printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 4);
 
