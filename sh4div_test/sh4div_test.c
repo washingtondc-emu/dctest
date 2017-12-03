@@ -28,6 +28,7 @@
 #include "sh4asm.h"
 
 typedef unsigned(*test_fn)(int, int);
+typedef unsigned(*test_fn3)(int, int, int);
 
 #define INST_MAX 256
 uint16_t inst_list[INST_MAX];
@@ -331,6 +332,114 @@ static int signed_div_test_32_32(void) {
     return actual_quotient == quotient;
 }
 
+static int unsigned_div_test_64_32(void) {
+    int32_t quotient, quotient_actual;
+    uint32_t dividend_high, dividend_low, divisor;
+    int64_t dividend64;
+
+    /*
+     * This test doesn't follow the same format as the other three.
+     *
+     * It expects the dividend to be a 64-bit int with the upper 4 bytes in R4,
+     * and the lower 4 bytes in R5.  The divisor goes in R6.  The quotient will be
+     * left in R5.
+     */
+    static char const *prog_asm =
+        "div0u\n"
+
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+        "rotcl r5\n"
+        "div1 r6, r4\n"
+
+        "rotcl r5\n"
+        "rts\n"
+        "mov r5, r0\n";
+
+
+    clear_jit();
+    sh4asm_input_string(prog_asm);
+    refresh_inst_list();
+
+
+    do {
+        dividend_high = rand();
+        dividend_low = rand();
+        divisor = rand();
+    } while ((!divisor) || (dividend_high >= divisor));
+    memcpy(&dividend64, &dividend_low, sizeof(dividend_low));
+    memcpy(((uint32_t*)&dividend64) + 1, &dividend_high, sizeof(dividend_high));
+    quotient = dividend64 / divisor;
+
+    test_fn3 func_ptr = (test_fn3)inst_list;
+    quotient_actual = func_ptr(dividend_high, dividend_low, divisor);
+    printf("%lld / %d\n", (long long)dividend64, (int)divisor);
+    printf("the expected result is %d\n", (int)quotient);
+    printf("the actual result is %d\n", (int)quotient_actual);
+
+    return quotient == quotient_actual;
+}
+
 #define N_TRIALS 8
 
 int main(int argc, char **argv) {
@@ -353,8 +462,12 @@ int main(int argc, char **argv) {
         n_success += signed_div_test_32_32();
         printf(n_success ? "SUCCESS\n" : "FAILURE\n");
     }
-
-    printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 3);
+    printf("==== unsigned_div_test_64_32 ====\n");
+    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
+        n_success += unsigned_div_test_64_32();
+        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+    }
+    printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 4);
 
     return 0;
 }
