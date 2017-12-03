@@ -228,13 +228,116 @@ static int signed_div_test_16_16(void) {
     return actual_quotient == quotient;
 }
 
+static int signed_div_test_32_32(void) {
+    int32_t dividend, divisor, quotient;
+
+    static char const *prog_asm =
+        "mov r4, r3\n"
+        "rotcl r3\n"
+        "subc r0, r0\n"
+        "xor r3, r3\n"
+        "subc r3, r4\n"
+
+        // at this point the dividend is in one's-complement
+        "div0s r5, r0\n"
+
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+        "rotcl r4\n"
+        "div1 r5, r0\n"
+
+        "rotcl r4\n"
+        "addc r3, r4\n"
+        "rts\n"
+        "mov r4, r0\n";
+
+    clear_jit();
+    sh4asm_input_string(prog_asm);
+    refresh_inst_list();
+
+    do {
+        dividend = rand();
+        divisor = rand();
+    } while (!divisor);
+
+    quotient = dividend / divisor;
+    printf("%d / %d\n", (int)dividend, (int)divisor);
+    printf("the expected result is %d\n", (int)quotient);
+
+    test_fn func_ptr = (test_fn)inst_list;
+    int32_t actual_quotient = func_ptr(dividend, divisor);
+    printf("the actual result is %d\n", (int)actual_quotient);
+
+    return actual_quotient == quotient;
+}
+
 #define N_TRIALS 8
 
 int main(int argc, char **argv) {
     sh4asm_set_emitter(emit_fn);
     unsigned trial_no;
     unsigned n_success = 0;
-    printf("attempting $d trials\n", N_TRIALS);
+    printf("attempting %d trials\n", N_TRIALS);
     printf("==== unsigned_div_test_32_16 ====\n");
     for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
         n_success += unsigned_div_test_32_16();
@@ -245,8 +348,13 @@ int main(int argc, char **argv) {
         n_success += signed_div_test_16_16();
         printf(n_success ? "SUCCESS\n" : "FAILURE\n");
     }
+    printf("==== signed_div_test_32_32 ====\n");
+    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
+        n_success += signed_div_test_32_32();
+        printf(n_success ? "SUCCESS\n" : "FAILURE\n");
+    }
 
-    printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 2);
+    printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 3);
 
     return 0;
 }
