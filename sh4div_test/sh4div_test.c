@@ -84,42 +84,64 @@ static void clear_jit(void) {
     sh4asm_reset();
 }
 
-static int unsigned_div_test_32_16(void) {
-    static char const *prog_asm =
-        /*
-         * old test: divisor goes into r1, dividend goes into r2
-         * new test: divisor goes into r5, dividend goes into r4
-         */
-        "shll16 r5\n"
-        "mov #16, r0\n"
-        "div0u\n"
+/*
+ * emit code to save all registers which should be preserved in the sh4
+ * calling convention.
+ *
+ * source: https://msdn.microsoft.com/en-us/library/ms925519.aspx
+ *         (hopefully this is the same in gnu as it is in Microsoft)
+ */
+static void emit_frame_open(void) {
+    sh4asm_input_string(
+        // r15 is always a stack pointer
+        "mov.l r8, @-r15\n"
+        "mov.l r9, @-r15\n"
+        "mov.l r10, @-r15\n"
+        "mov.l r11, @-r15\n"
+        "mov.l r12, @-r15\n"
+        "mov.l r13, @-r15\n"
+        "mov.l r14, @-r15\n"
+        );
+}
 
-        /*
-         * looping is untenable here because we don't want to touch the T flag
-         * it *is* possible to save/restore the T flag on every iteration, but
-         * it's easier to just copy/paste the same instruction 16 times.
-         */
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-
-        "rotcl r4\n"
+/*
+ * restore the state which was previously saved
+ * by emit_frame_open.  This includes the return statement,
+ * so be sure to set r0 before calling this.
+ *
+ * Also make sure you undo any changes to r15 before calling this
+ */
+static void emit_frame_close(void) {
+    sh4asm_input_string(
+        "mov.l @r15+, r14\n"
+        "mov.l @r15+, r13\n"
+        "mov.l @r15+, r12\n"
+        "mov.l @r15+, r11\n"
+        "mov.l @r15+, r10\n"
+        "mov.l @r15+, r9\n"
         "rts\n"
-        "extu.w r4, r0\n";
+        "mov.l @r15+, r8\n"
+        );
+}
 
+static int pick_reg(bool const whitelist[16]) {
+    unsigned reg_count = 0;
+    unsigned reg_idx;
+    for (reg_idx = 0; reg_idx < 16; reg_idx++)
+        if (whitelist[reg_idx])
+            reg_count++;
+    unsigned pick = rand() % reg_count;
+    for (reg_idx = 0; reg_idx < 16; reg_idx++)
+        if (whitelist[reg_idx]) {
+            if (!pick)
+                return reg_idx;
+            pick--;
+        }
+    printf("WARNING: REACHED END OF %s\n", __func__);
+    return 0;
+}
+
+static int unsigned_div_test_32_16(void) {
     /*
      * pick a random 32-bit dividend and a random 16-bit divisor,
      * being careful to ensure that there is no overflow
@@ -141,7 +163,27 @@ static int unsigned_div_test_32_16(void) {
     printf("the expected result is %u\n", (unsigned)quotient);
 
     clear_jit();
-    sh4asm_input_string(prog_asm);
+
+    unsigned idx;
+    bool whitelist[16] = {
+        false, true, true, true, true, false, true, true,
+        true,  true, true, true, true, true,  true, false };
+    unsigned dividend_reg = pick_reg(whitelist);
+    whitelist[dividend_reg] = false;
+    unsigned divisor_reg = pick_reg(whitelist);
+
+    emit_frame_open();
+    sh4asm_printf("mov r4, r%u\n", dividend_reg);
+    sh4asm_printf("mov r5, r%u\n", divisor_reg);
+    sh4asm_printf("shll16 r%u\n", divisor_reg);
+    sh4asm_printf("mov #16, r0\n");
+    sh4asm_printf("div0u\n");
+    for (idx = 0; idx < 16; idx++)
+        sh4asm_printf("div1 r%u, r%u\n", divisor_reg, dividend_reg);
+    sh4asm_printf("rotcl r%u\n", dividend_reg);
+    sh4asm_printf("extu.w r%u, r0\n", dividend_reg);
+    emit_frame_close();
+
     refresh_inst_list();
 
     test_fn func_ptr = (test_fn)inst_list;
@@ -152,42 +194,6 @@ static int unsigned_div_test_32_16(void) {
 }
 
 static int signed_div_test_16_16(void) {
-    static char const *prog_asm =
-        /*
-         * old test: divisor goes into r1, dividend goes into r2
-         * new test: divisor goes into r5, dividend goes into r4
-         */
-        "shll16 r5\n"
-        "exts.w r4, r4\n"
-        "xor r0, r0\n"
-        "mov r4, r3\n"
-        "rotcl r3\n"
-        "subc r0, r4\n"
-
-        "div0s r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-        "div1 r5, r4\n"
-
-        "exts.w r4, r4\n"
-        "rotcl r4\n"
-        "addc r0, r4\n"
-        "rts\n"
-        "exts.w r4, r0\n";
-
     /*
      * pick random 16-bit signed integers.
      * this is less complicated than it looks.
@@ -210,6 +216,36 @@ static int signed_div_test_16_16(void) {
             divisor &= 0xffff;
     } while (!divisor);
 
+    bool whitelist[16] = {
+        false, true, true, false, true, false, true, true,
+        true,  true, true, true,  true, true,  true, false };
+    unsigned dividend_reg = pick_reg(whitelist);
+    whitelist[dividend_reg] = false;
+    unsigned divisor_reg = pick_reg(whitelist);
+
+    clear_jit();
+
+    emit_frame_open();
+    sh4asm_printf("mov r4, r%u\n", dividend_reg);
+    sh4asm_printf("mov r5, r%u\n", divisor_reg);
+
+    sh4asm_printf("shll16 r%u\n", divisor_reg);
+    sh4asm_printf("exts.w r%u, r%u\n", dividend_reg, dividend_reg);
+    sh4asm_printf("xor r0, r0\n");
+    sh4asm_printf("mov r%u, r3\n", dividend_reg);
+    sh4asm_printf("rotcl r3\n");
+    sh4asm_printf("div0s r%u, r%u\n", divisor_reg, dividend_reg);
+    unsigned idx;
+    for (idx = 0; idx < 16; idx++)
+        sh4asm_printf("div1 r%u, r%u\n", divisor_reg, dividend_reg);
+    sh4asm_printf("exts.w r%u, r%u\n", dividend_reg, dividend_reg);
+    sh4asm_printf("rotcl r%u\n", dividend_reg);
+    sh4asm_printf("addc r0, r%u\n", dividend_reg);
+    sh4asm_printf("exts.w r%u, r0\n", dividend_reg);
+    emit_frame_close();
+
+    refresh_inst_list();
+
     /*
      * XXX: you can't actually rely on the expected quotient here to validate
      * results since that may very well turn out to use the exact same opcodes
@@ -218,10 +254,6 @@ static int signed_div_test_16_16(void) {
     quotient = (int32_t)dividend / (int32_t)divisor;
     printf("%d / %d\n", (int)dividend, (int)divisor);
     printf("the expected result is %d\n", (int)quotient);
-
-    clear_jit();
-    sh4asm_input_string(prog_asm);
-    refresh_inst_list();
 
     test_fn func_ptr = (test_fn)inst_list;
     int32_t actual_quotient = func_ptr(dividend, divisor);
@@ -233,88 +265,37 @@ static int signed_div_test_16_16(void) {
 static int signed_div_test_32_32(void) {
     int32_t dividend, divisor, quotient;
 
-    static char const *prog_asm =
-        "mov r4, r3\n"
-        "rotcl r3\n"
-        "subc r0, r0\n"
-        "xor r3, r3\n"
-        "subc r3, r4\n"
-
-        // at this point the dividend is in one's-complement
-        "div0s r5, r0\n"
-
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-        "rotcl r4\n"
-        "div1 r5, r0\n"
-
-        "rotcl r4\n"
-        "addc r3, r4\n"
-        "rts\n"
-        "mov r4, r0\n";
+    bool whitelist[16] = {
+        false, true, true, false, true, false, true, true,
+        true,  true, true, true,  true, true,  true, false };
+    unsigned dividend_reg = pick_reg(whitelist);
+    whitelist[dividend_reg] = false;
+    unsigned divisor_reg = pick_reg(whitelist);
 
     clear_jit();
-    sh4asm_input_string(prog_asm);
+    emit_frame_open();
+
+    sh4asm_printf("mov r4, r%u\n", dividend_reg);
+    sh4asm_printf("mov r5, r%u\n", divisor_reg);
+
+    sh4asm_printf("mov r%u, r3\n", dividend_reg);
+    sh4asm_printf("rotcl r3\n");
+    sh4asm_printf("subc r0, r0\n");
+    sh4asm_printf("xor r3, r3\n");
+    sh4asm_printf("subc r3, r%u\n", dividend_reg);
+
+    // at this point the dividend is in one's-complement
+    sh4asm_printf("div0s r%u, r0\n", divisor_reg);
+    unsigned idx;
+    for (idx = 0; idx < 32; idx++) {
+        sh4asm_printf("rotcl r%u\n", dividend_reg);
+        sh4asm_printf("div1 r%u, r0\n", divisor_reg);
+    }
+    sh4asm_printf("rotcl r%u\n", dividend_reg);
+    sh4asm_printf("addc r3, r%u\n", dividend_reg);
+    sh4asm_printf("mov r%u, r0\n", dividend_reg);
+    emit_frame_close();
+
     refresh_inst_list();
 
     do {
@@ -338,90 +319,32 @@ static int unsigned_div_test_64_32(void) {
     uint32_t dividend_high, dividend_low, divisor;
     int64_t dividend64;
 
-    /*
-     * This test doesn't follow the same format as the other three.
-     *
-     * It expects the dividend to be a 64-bit int with the upper 4 bytes in R4,
-     * and the lower 4 bytes in R5.  The divisor goes in R6.  The quotient will be
-     * left in R5.
-     */
-    static char const *prog_asm =
-        "div0u\n"
-
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-        "rotcl r5\n"
-        "div1 r6, r4\n"
-
-        "rotcl r5\n"
-        "rts\n"
-        "mov r5, r0\n";
-
+    bool whitelist[16] = {
+        false, true, true, true, true, false, false, true,
+        true,  true, true, true,  true, true,  true, false };
+    unsigned dividend_hi_reg = pick_reg(whitelist);
+    whitelist[dividend_hi_reg] = false;
+    unsigned dividend_low_reg = pick_reg(whitelist);
+    whitelist[dividend_low_reg] = false;
+    unsigned divisor_reg = pick_reg(whitelist);
 
     clear_jit();
-    sh4asm_input_string(prog_asm);
-    refresh_inst_list();
+    emit_frame_open();
 
+    sh4asm_printf("mov r4, r%u\n", dividend_hi_reg);
+    sh4asm_printf("mov r5, r%u\n", dividend_low_reg);
+    sh4asm_printf("mov r6, r%u\n", divisor_reg);
+    sh4asm_printf("div0u\n");
+    unsigned idx;
+    for (idx = 0; idx < 32; idx++) {
+        sh4asm_printf("rotcl r%u\n", dividend_low_reg);
+        sh4asm_printf("div1 r%u, r%u\n", divisor_reg, dividend_hi_reg);
+    }
+    sh4asm_printf("rotcl r%u\n", dividend_low_reg);
+    sh4asm_printf("mov r%u, r0\n", dividend_low_reg);
+
+    emit_frame_close();
+    refresh_inst_list();
 
     do {
         dividend_high = rand();
