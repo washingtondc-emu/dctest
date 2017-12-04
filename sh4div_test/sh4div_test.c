@@ -81,6 +81,7 @@ static void emit_fn(uint16_t inst) {
 
 static void clear_jit(void) {
     inst_count = 0;
+    sh4asm_reset();
 }
 
 static int unsigned_div_test_32_16(void) {
