@@ -222,6 +222,8 @@ static int signed_div_test_16_16(void) {
     unsigned dividend_reg = pick_reg(whitelist);
     whitelist[dividend_reg] = false;
     unsigned divisor_reg = pick_reg(whitelist);
+    whitelist[divisor_reg] = false;
+    unsigned tmp_reg = pick_reg(whitelist);
 
     clear_jit();
 
@@ -232,8 +234,8 @@ static int signed_div_test_16_16(void) {
     sh4asm_printf("shll16 r%u\n", divisor_reg);
     sh4asm_printf("exts.w r%u, r%u\n", dividend_reg, dividend_reg);
     sh4asm_printf("xor r0, r0\n");
-    sh4asm_printf("mov r%u, r3\n", dividend_reg);
-    sh4asm_printf("rotcl r3\n");
+    sh4asm_printf("mov r%u, r%u\n", dividend_reg, tmp_reg);
+    sh4asm_printf("rotcl r%u\n", tmp_reg);
     sh4asm_printf("div0s r%u, r%u\n", divisor_reg, dividend_reg);
     unsigned idx;
     for (idx = 0; idx < 16; idx++)
@@ -271,6 +273,8 @@ static int signed_div_test_32_32(void) {
     unsigned dividend_reg = pick_reg(whitelist);
     whitelist[dividend_reg] = false;
     unsigned divisor_reg = pick_reg(whitelist);
+    whitelist[divisor_reg] = false;
+    unsigned tmp_reg = pick_reg(whitelist);
 
     clear_jit();
     emit_frame_open();
@@ -278,11 +282,11 @@ static int signed_div_test_32_32(void) {
     sh4asm_printf("mov r4, r%u\n", dividend_reg);
     sh4asm_printf("mov r5, r%u\n", divisor_reg);
 
-    sh4asm_printf("mov r%u, r3\n", dividend_reg);
-    sh4asm_printf("rotcl r3\n");
+    sh4asm_printf("mov r%u, r%u\n", dividend_reg, tmp_reg);
+    sh4asm_printf("rotcl r%u\n", tmp_reg);
     sh4asm_printf("subc r0, r0\n");
-    sh4asm_printf("xor r3, r3\n");
-    sh4asm_printf("subc r3, r%u\n", dividend_reg);
+    sh4asm_printf("xor r%u, r%u\n", tmp_reg, tmp_reg);
+    sh4asm_printf("subc r%u, r%u\n", tmp_reg, dividend_reg);
 
     // at this point the dividend is in one's-complement
     sh4asm_printf("div0s r%u, r0\n", divisor_reg);
@@ -292,7 +296,7 @@ static int signed_div_test_32_32(void) {
         sh4asm_printf("div1 r%u, r0\n", divisor_reg);
     }
     sh4asm_printf("rotcl r%u\n", dividend_reg);
-    sh4asm_printf("addc r3, r%u\n", dividend_reg);
+    sh4asm_printf("addc r%u, r%u\n", tmp_reg, dividend_reg);
     sh4asm_printf("mov r%u, r0\n", dividend_reg);
     emit_frame_close();
 
