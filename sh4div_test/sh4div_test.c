@@ -27,8 +27,8 @@
 
 #include "sh4asm.h"
 
-typedef unsigned(*test_fn)(int, int);
-typedef unsigned(*test_fn3)(int, int, int);
+typedef unsigned(*jit_fn2)(int, int);
+typedef unsigned(*jit_fn3)(int, int, int);
 
 #define INST_MAX 256
 uint16_t inst_list[INST_MAX];
@@ -141,7 +141,7 @@ static int pick_reg(bool const whitelist[16]) {
     return 0;
 }
 
-static int unsigned_div_test_32_16(void) {
+static bool unsigned_div_test_32_16(void) {
     /*
      * pick a random 32-bit dividend and a random 16-bit divisor,
      * being careful to ensure that there is no overflow
@@ -186,14 +186,14 @@ static int unsigned_div_test_32_16(void) {
 
     refresh_inst_list();
 
-    test_fn func_ptr = (test_fn)inst_list;
+    jit_fn2 func_ptr = (jit_fn2)inst_list;
     unsigned actual_quotient = func_ptr(dividend, divisor);
     printf("the actual result is %u\n", actual_quotient);
 
     return actual_quotient == quotient;
 }
 
-static int signed_div_test_16_16(void) {
+static bool signed_div_test_16_16(void) {
     /*
      * pick random 16-bit signed integers.
      * this is less complicated than it looks.
@@ -257,14 +257,14 @@ static int signed_div_test_16_16(void) {
     printf("%d / %d\n", (int)dividend, (int)divisor);
     printf("the expected result is %d\n", (int)quotient);
 
-    test_fn func_ptr = (test_fn)inst_list;
+    jit_fn2 func_ptr = (jit_fn2)inst_list;
     int32_t actual_quotient = func_ptr(dividend, divisor);
     printf("the actual result is %d\n", (int)actual_quotient);
 
     return actual_quotient == quotient;
 }
 
-static int signed_div_test_32_32(void) {
+static bool signed_div_test_32_32(void) {
     int32_t dividend, divisor, quotient;
 
     bool whitelist[16] = {
@@ -311,14 +311,14 @@ static int signed_div_test_32_32(void) {
     printf("%d / %d\n", (int)dividend, (int)divisor);
     printf("the expected result is %d\n", (int)quotient);
 
-    test_fn func_ptr = (test_fn)inst_list;
+    jit_fn2 func_ptr = (jit_fn2)inst_list;
     int32_t actual_quotient = func_ptr(dividend, divisor);
     printf("the actual result is %d\n", (int)actual_quotient);
 
     return actual_quotient == quotient;
 }
 
-static int unsigned_div_test_64_32(void) {
+static bool unsigned_div_test_64_32(void) {
     int32_t quotient, quotient_actual;
     uint32_t dividend_high, dividend_low, divisor;
     int64_t dividend64;
@@ -359,7 +359,7 @@ static int unsigned_div_test_64_32(void) {
     memcpy(((uint32_t*)&dividend64) + 1, &dividend_high, sizeof(dividend_high));
     quotient = dividend64 / divisor;
 
-    test_fn3 func_ptr = (test_fn3)inst_list;
+    jit_fn3 func_ptr = (jit_fn3)inst_list;
     quotient_actual = func_ptr(dividend_high, dividend_low, divisor);
     printf("%lld / %d\n", (long long)dividend64, (int)divisor);
     printf("the expected result is %d\n", (int)quotient);
@@ -368,39 +368,39 @@ static int unsigned_div_test_64_32(void) {
     return quotient == quotient_actual;
 }
 
+static struct test {
+    char const *test_name;
+    bool(*test_fn)(void);
+} const tests[] = {
+    { "unsigned_div_test_32_16", unsigned_div_test_32_16 },
+    { "signed_div_test_16_16", signed_div_test_16_16 },
+    { "signed_div_test_32_32", signed_div_test_32_32 },
+    { "unsigned_div_test_64_32", unsigned_div_test_64_32 },
+    { NULL }
+};
+
 #define N_TRIALS 8
 
 int main(int argc, char **argv) {
     sh4asm_set_emitter(emit_fn);
     unsigned trial_no;
     unsigned n_success = 0;
-    int res;
+    unsigned n_tests = 0;
+
     printf("attempting %d trials\n", N_TRIALS);
-    printf("==== unsigned_div_test_32_16 ====\n");
-    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        res = unsigned_div_test_32_16();
-        n_success += res;
-        printf(res ? "SUCCESS\n" : "FAILURE\n");
+    struct test const *test = tests;
+    while (test->test_name) {
+        printf("==== %s ====\n", test->test_name);
+        for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
+            bool success = test->test_fn();
+            if (success)
+                n_success++;
+            printf(success ? "SUCCESS\n" : "FAILURE\n");
+            n_tests++;
+        }
+        test++;
     }
-    printf("==== signed_div_test_16_16 ====\n");
-    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        res = signed_div_test_16_16();
-        n_success += res;
-        printf(res ? "SUCCESS\n" : "FAILURE\n");
-    }
-    printf("==== signed_div_test_32_32 ====\n");
-    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        res = signed_div_test_32_32();
-        n_success += res;
-        printf(res ? "SUCCESS\n" : "FAILURE\n");
-    }
-    printf("==== unsigned_div_test_64_32 ====\n");
-    for (trial_no = 0; trial_no < N_TRIALS; trial_no++) {
-        res = unsigned_div_test_64_32();
-        n_success += res;
-        printf(res ? "SUCCESS\n" : "FAILURE\n");
-    }
-    printf("%d successes out of %d total trials\n", n_success, N_TRIALS * 4);
+    printf("%d successes out of %d total trials\n", n_success, n_tests);
 
     return 0;
 }
