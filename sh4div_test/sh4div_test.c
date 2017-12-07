@@ -379,7 +379,7 @@ static struct test {
     { NULL }
 };
 
-#define N_TRIALS 8
+#define N_TRIALS 32
 
 int main(int argc, char **argv) {
     sh4asm_set_emitter(emit_fn);
