@@ -1,0 +1,541 @@
+
+--
+KallistiOS Git revision 374a47b: Sat Dec  2 23:11:27 PST 2017
+  jay@sbckrs_desktop:/home/jay/src/KallistiOS
+maple: active drivers:
+    Dreameye (Camera): Camera
+    Sound Input Peripheral: Microphone
+    PuruPuru (Vibration) Pack: JumpPack
+    VMU Driver: Clock, LCD, MemoryCard
+    Mouse Driver: Mouse
+    Keyboard Driver: Keyboard
+    Controller Driver: Controller
+    Lightgun: LightGun
+  DMA Buffer at ac0dacc0
+vid_set_mode: 640x480 NTSC
+dc-load console support enabled
+maple: attached devices:
+  A0: Dreamcast Controller          (01000000: Controller)
+  A1: Visual Memory                 (0e000000: Clock, LCD, MemoryCard)
+  A2: Puru Puru Pack                (00010000: JumpPack)
+attempting 32 trials
+==== unsigned_div_test_32_16 ====
+1481765933 / 36047
+the expected result is 41106
+the actual result is 41106
+SUCCESS
+812669700 / 23988
+the expected result is 33878
+the actual result is 33878
+SUCCESS
+730417256 / 22183
+the expected result is 32926
+the actual result is 32926
+SUCCESS
+1889772843 / 47857
+the expected result is 39487
+the actual result is 39487
+SUCCESS
+777206980 / 24495
+the expected result is 31729
+the actual result is 31729
+SUCCESS
+849040635 / 49208
+the expected result is 17254
+the actual result is 17254
+SUCCESS
+2038269862 / 50964
+the expected result is 39994
+the actual result is 39994
+SUCCESS
+725914710 / 34340
+the expected result is 21139
+the actual result is 21139
+SUCCESS
+1840579929 / 32141
+the expected result is 57265
+the actual result is 57265
+SUCCESS
+1718458134 / 38281
+the expected result is 44890
+the actual result is 44890
+SUCCESS
+185252727 / 5830
+the expected result is 31775
+the actual result is 31775
+SUCCESS
+15934104 / 1672
+the expected result is 9529
+the actual result is 9529
+SUCCESS
+451230256 / 36308
+the expected result is 12427
+the actual result is 12427
+SUCCESS
+1248402490 / 26637
+the expected result is 46867
+the actual result is 46867
+SUCCESS
+1382875695 / 60833
+the expected result is 22732
+the actual result is 22732
+SUCCESS
+120033497 / 37224
+the expected result is 3224
+the actual result is 3224
+SUCCESS
+643287356 / 11176
+the expected result is 57559
+the actual result is 57559
+SUCCESS
+1888581007 / 65066
+the expected result is 29025
+the actual result is 29025
+SUCCESS
+401170801 / 65130
+the expected result is 6159
+the actual result is 6159
+SUCCESS
+1339228195 / 40368
+the expected result is 33175
+the actual result is 33175
+SUCCESS
+1152299427 / 34602
+the expected result is 33301
+the actual result is 33301
+SUCCESS
+735206212 / 52249
+the expected result is 14071
+the actual result is 14071
+SUCCESS
+808284658 / 21867
+the expected result is 36963
+the actual result is 36963
+SUCCESS
+1361784847 / 35460
+the expected result is 38403
+the actual result is 38403
+SUCCESS
+5748438 / 57987
+the expected result is 99
+the actual result is 99
+SUCCESS
+28409913 / 3219
+the expected result is 8825
+the actual result is 8825
+SUCCESS
+968295562 / 43262
+the expected result is 22382
+the actual result is 22382
+SUCCESS
+241418521 / 35710
+the expected result is 6760
+the actual result is 6760
+SUCCESS
+1891777678 / 64710
+the expected result is 29234
+the actual result is 29234
+SUCCESS
+212677188 / 24640
+the expected result is 8631
+the actual result is 8631
+SUCCESS
+583332387 / 47710
+the expected result is 12226
+the actual result is 12226
+SUCCESS
+1931858668 / 65087
+the expected result is 29681
+the actual result is 29681
+SUCCESS
+==== signed_div_test_16_16 ====
+-21638 / -21951
+the expected result is 0
+the actual result is 0
+SUCCESS
+-20757 / -14842
+the expected result is 1
+the actual result is 1
+SUCCESS
+4792 / 31340
+the expected result is 0
+the actual result is 0
+SUCCESS
+15863 / 21044
+the expected result is 0
+the actual result is 0
+SUCCESS
+15667 / 7792
+the expected result is 2
+the actual result is 2
+SUCCESS
+-14830 / -19723
+the expected result is 0
+the actual result is 0
+SUCCESS
+17045 / -9370
+the expected result is -1
+the actual result is -1
+SUCCESS
+-32526 / 17007
+the expected result is -1
+the actual result is -1
+SUCCESS
+-8023 / 28390
+the expected result is 0
+the actual result is 0
+SUCCESS
+14015 / 8122
+the expected result is 1
+the actual result is 1
+SUCCESS
+-10066 / -32476
+the expected result is 0
+the actual result is 0
+SUCCESS
+19576 / 22341
+the expected result is 0
+the actual result is 0
+SUCCESS
+11384 / -6599
+the expected result is -1
+the actual result is -1
+SUCCESS
+-32295 / -29622
+the expected result is 1
+the actual result is 1
+SUCCESS
+-17605 / -15427
+the expected result is 1
+the actual result is 1
+SUCCESS
+13636 / 9051
+the expected result is 1
+the actual result is 1
+SUCCESS
+-29323 / 31583
+the expected result is 0
+the actual result is 0
+SUCCESS
+17464 / -12281
+the expected result is -1
+the actual result is -1
+SUCCESS
+1201 / -19153
+the expected result is 0
+the actual result is 0
+SUCCESS
+-4043 / -14038
+the expected result is 0
+the actual result is 0
+SUCCESS
+23215 / -15697
+the expected result is -1
+the actual result is -1
+SUCCESS
+30837 / -3243
+the expected result is -9
+the actual result is -9
+SUCCESS
+-5213 / 27145
+the expected result is 0
+the actual result is 0
+SUCCESS
+7603 / 4116
+the expected result is 1
+the actual result is 1
+SUCCESS
+18727 / -27541
+the expected result is 0
+the actual result is 0
+SUCCESS
+32016 / 29082
+the expected result is 1
+the actual result is 1
+SUCCESS
+-7368 / -8828
+the expected result is 0
+the actual result is 0
+SUCCESS
+19029 / -10118
+the expected result is -1
+the actual result is -1
+SUCCESS
+21183 / -3522
+the expected result is -6
+the actual result is -6
+SUCCESS
+30759 / -9609
+the expected result is -3
+the actual result is -3
+SUCCESS
+-21024 / -11370
+the expected result is 1
+the actual result is 1
+SUCCESS
+26733 / -3212
+the expected result is -8
+the actual result is -8
+SUCCESS
+==== signed_div_test_32_32 ====
+178883767 / 827166045
+the expected result is 0
+the actual result is 0
+SUCCESS
+452444896 / 1796613051
+the expected result is 0
+the actual result is 0
+SUCCESS
+2078178978 / 236080650
+the expected result is 8
+the actual result is 8
+SUCCESS
+1104530716 / 893065161
+the expected result is 1
+the actual result is 1
+SUCCESS
+1463846098 / 326665130
+the expected result is 4
+the actual result is 4
+SUCCESS
+1941574088 / 234179031
+the expected result is 8
+the actual result is 8
+SUCCESS
+612172294 / 1731415693
+the expected result is 0
+the actual result is 0
+SUCCESS
+604257737 / 411582458
+the expected result is 1
+the actual result is 1
+SUCCESS
+1414036229 / 1170490215
+the expected result is 1
+the actual result is 1
+SUCCESS
+2014059754 / 1103580243
+the expected result is 1
+the actual result is 1
+SUCCESS
+1756377564 / 450650277
+the expected result is 3
+the actual result is 3
+SUCCESS
+1104667212 / 1417872782
+the expected result is 0
+the actual result is 0
+SUCCESS
+1722668324 / 1863334004
+the expected result is 0
+the actual result is 0
+SUCCESS
+1734163363 / 347371391
+the expected result is 4
+the actual result is 4
+SUCCESS
+557511759 / 1861506626
+the expected result is 0
+the actual result is 0
+SUCCESS
+2112026358 / 510083577
+the expected result is 4
+the actual result is 4
+SUCCESS
+695475948 / 1106023605
+the expected result is 0
+the actual result is 0
+SUCCESS
+1073113430 / 1408884323
+the expected result is 0
+the actual result is 0
+SUCCESS
+1331020202 / 1789630847
+the expected result is 0
+the actual result is 0
+SUCCESS
+806799588 / 2097749304
+the expected result is 0
+the actual result is 0
+SUCCESS
+154736414 / 1418544567
+the expected result is 0
+the actual result is 0
+SUCCESS
+39987000 / 107488992
+the expected result is 0
+the actual result is 0
+SUCCESS
+760329868 / 1966331975
+the expected result is 0
+the actual result is 0
+SUCCESS
+1699274596 / 1942525379
+the expected result is 0
+the actual result is 0
+SUCCESS
+1665564232 / 1631816430
+the expected result is 1
+the actual result is 1
+SUCCESS
+1037430311 / 1605816179
+the expected result is 0
+the actual result is 0
+SUCCESS
+1008690903 / 1029201993
+the expected result is 0
+the actual result is 0
+SUCCESS
+704495905 / 1233326029
+the expected result is 0
+the actual result is 0
+SUCCESS
+1484908657 / 1265491377
+the expected result is 1
+the actual result is 1
+SUCCESS
+66110757 / 481376529
+the expected result is 0
+the actual result is 0
+SUCCESS
+1117104852 / 1739141933
+the expected result is 0
+the actual result is 0
+SUCCESS
+1099874732 / 627711606
+the expected result is 1
+the actual result is 1
+SUCCESS
+==== unsigned_div_test_64_32 ====
+895935449303331627 / 880180058
+the expected result is 1017900191
+the actual result is 1017900191
+SUCCESS
+161702830609603308 / 1384404671
+the expected result is 116803153
+the actual result is 116803153
+SUCCESS
+6536984145184327074 / 1761818666
+the expected result is -584605798
+the actual result is -584605798
+SUCCESS
+2228072108140856970 / 2138392511
+the expected result is 1041937855
+the actual result is 1041937855
+SUCCESS
+708227618603549464 / 478762220
+the expected result is 1479288859
+the actual result is 1479288859
+SUCCESS
+5938831566311392048 / 1537501517
+the expected result is -432316430
+the actual result is -432316430
+SUCCESS
+1676205203526984406 / 1895591035
+the expected result is 884265209
+the actual result is 884265209
+SUCCESS
+164485471575467992 / 1048555821
+the expected result is 156868588
+the actual result is 156868588
+SUCCESS
+506463515889756500 / 669388451
+the expected result is 756606295
+the actual result is 756606295
+SUCCESS
+3660122546411697545 / 1114506820
+the expected result is -1010893587
+the actual result is -1010893587
+SUCCESS
+1856372493139615668 / 2039294279
+the expected result is 910301427
+the actual result is 910301427
+SUCCESS
+116694580893936665 / 113597342
+the expected result is 1027265064
+the actual result is 1027265064
+SUCCESS
+929784486509467477 / 1790613439
+the expected result is 519254723
+the actual result is 519254723
+SUCCESS
+5738208833769685244 / 1815458064
+the expected result is -1134217430
+the actual result is -1134217430
+SUCCESS
+875204117659301459 / 1108323206
+the expected result is 789665066
+the actual result is 789665066
+SUCCESS
+1858033638684837104 / 1216685007
+the expected result is 1527127915
+the actual result is 1527127915
+SUCCESS
+2423353650170062893 / 2074025239
+the expected result is 1168430164
+the actual result is 1168430164
+SUCCESS
+3064574934361505523 / 1207248983
+the expected result is -1756489338
+the actual result is -1756489338
+SUCCESS
+1190915623382613118 / 1277164213
+the expected result is 932468676
+the actual result is 932468676
+SUCCESS
+157888999493295088 / 365780715
+the expected result is 431649327
+the actual result is 431649327
+SUCCESS
+2287953053570598212 / 1136350866
+the expected result is 2013421313
+the actual result is 2013421313
+SUCCESS
+3424127983152619190 / 1685673045
+the expected result is 2031312058
+the actual result is 2031312058
+SUCCESS
+5569005715303937031 / 1996606817
+the expected result is -1505732246
+the actual result is -1505732246
+SUCCESS
+552432142760043021 / 568066184
+the expected result is 972478486
+the actual result is 972478486
+SUCCESS
+856544056714372234 / 842511577
+the expected result is 1016655533
+the actual result is 1016655533
+SUCCESS
+5966717256276844739 / 2103210887
+the expected result is -1458011053
+the actual result is -1458011053
+SUCCESS
+1757703234228300889 / 1489252809
+the expected result is 1180258464
+the actual result is 1180258464
+SUCCESS
+6106915833692741215 / 1778927100
+the expected result is -862046502
+the actual result is -862046502
+SUCCESS
+4724539271225499714 / 1291092544
+the expected result is -635632965
+the actual result is -635632965
+SUCCESS
+6663567445638879012 / 1616740977
+the expected result is -173362450
+the actual result is -173362450
+SUCCESS
+9688073924826739 / 732013956
+the expected result is 13234821
+the actual result is 13234821
+SUCCESS
+3930046672704547764 / 1409718917
+the expected result is -1507144401
+the actual result is -1507144401
+SUCCESS
+128 successes out of 128 total trials
+arch: shutting down kernel
+maple: final stats -- device count = 3, vbl_cntr = 100, dma_cntr = 99
+vid_set_mode: 640x480 NTSC
