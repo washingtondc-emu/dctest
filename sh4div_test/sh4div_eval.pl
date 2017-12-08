@@ -42,44 +42,78 @@
 
 use Net::Telnet();
 
+# WashingtonDC parameters
+$FIRMWARE_PATH="./dc_bios.bin";
+$FLASH_PATH="./dc_flash.bin";
+$SYSCALL_PATH="./syscalls.bin";
+$IP_BIN_PATH="./IP.BIN";
+$SH4DIV_TEST_PATH="./sh4div_test.bin";
+$WASH_PATH="./washingtondc";
+$WASH_ARGS="-b $FIRMWARE_PATH -f $FLASH_PATH -s $SYSCALL_PATH -dutc $IP_BIN_PATH $SH4DIV_TEST_PATH";
+
+# path to where the serial port output from WashingtonDC gets logged
+$WASH_SERIAL_LOG = "wash_serial.txt";
+
+# output from WashingtonDC
+$WASH_LOG = "wash_dbg_log.txt";
+
+# This is the "correct" output that we are comparing $WASH_SERIAL_LOG against.
+# this output should be captured from a real Dreamcast
+$DC_SERIAL_LOG = "dc_log.txt";
+
+$wash_cmd="$WASH_PATH $WASH_ARGS";
+print "command line is \"$wash_cmd\"\n";
+
+# launch WashingtonDC in the background
+$child_pid = fork;
+if ($child_pid == 0) {
+    exit system("$wash_cmd > $WASH_LOG");
+}
+
+# give WashingtonDC a chance to start running
+sleep 5;
+
+# connect to the serial port
 $t = new Net::Telnet(Timeout => 10, port => 1998);
 $t->open("localhost");
 
+# give it some time to make the connection so WashingtonDC will start listening
+# on port 2000
 sleep 5;
 
+# connect to the CLI
 $cmd_con = new Net::Telnet(Timeout => 10, port => 2000);
 $cmd_con->open("localhost");
 
+# start the emulator
 $cmd_con->cmd("begin-execution");
 
 $found_beg=0;
 
-$wash_log = "wash_log.txt";
-$dc_log = "dc_log.txt";
+print "saving WashingtonDC serial logs to $WASH_SERIAL_LOG\n";
+open($wash_serial_file, "> $WASH_SERIAL_LOG") || die "failed to open $WASH_SERIAL_LOG";
 
-print "saving WashingtonDC logs to $wash_log\n";
-open($out_file, "> $wash_log") || die "failed to open $wash_log";
+@wash_serial_lines = ( );
 
-@wash_log_lines = ( );
-
+# read in from the serial port
 while (my $line = $t->getline()) {
     if ($line =~ /vid_set_mode:.*/) {
         next;
     }
 
-    print $out_file $line;
-    push @wash_log_lines, $line;
+    print $wash_serial_file $line;
+    push @wash_serial_lines, $line;
 
     if ($line =~ /maple: final stats.*/) {
         last;
     }
 }
 
-close($out_file);
+close($wash_serial_file);
 
-open($dc_log_file, "< $dc_log");
-@dc_log_lines = <$dc_log_file>;
-close($dc_log_file);
+open($dc_serial_file, "< $DC_SERIAL_LOG");
+@dc_serial_lines = <$dc_serial_file>;
+close($dc_serial_file);
 
 # returns true if the given line does not need to match between Dreamcast and
 # WashingtonDC
@@ -120,23 +154,23 @@ sub do_ignore {
     return 0;
 }
 
-@dc_log_filtered = ( );
-@wash_log_filtered = ( );
+@dc_serial_filtered = ( );
+@wash_serial_filtered = ( );
 
-foreach $line ( @dc_log_lines ) {
+foreach $line ( @dc_serial_lines ) {
     if (not do_ignore($line)) {
-        push @dc_log_filtered, $line;
+        push @dc_serial_filtered, $line;
     }
 }
 
-foreach $line ( @wash_log_lines ) {
+foreach $line ( @wash_serial_lines ) {
     if (not do_ignore($line)) {
-        push @wash_log_filtered, $line;
+        push @wash_serial_filtered, $line;
     }
 }
 
-$wash_line_count = scalar(@wash_log_filtered);
-$dc_line_count = scalar(@dc_log_filtered);
+$wash_line_count = scalar(@wash_serial_filtered);
+$dc_line_count = scalar(@dc_serial_filtered);
 
 printf("line counts (post-filter) - %d and %d\n",
        $wash_line_count, $dc_line_count);
@@ -146,7 +180,7 @@ if ($wash_line_count != $dc_line_count) {
 }
 
 for (my $line_no = 0; $line_no < $wash_line_count; $line_no++) {
-    if ($wash_log_filtered[$line_no] != $dc_log_filtered[$line_no]) {
+    if ($wash_serial_filtered[$line_no] != $dc_serial_filtered[$line_no]) {
         die "mismatch at line $line_no";
     }
 }
@@ -155,6 +189,16 @@ print "WashingtonDC's log is consistent with Dreamcast capture\n";
 
 $cmd_con->cmd("exit");
 
-sleep 5;
+$dead_pid = wait;
+$exit_code = $?;
+if ($dead_pid < 0) {
+    die "wait failed";
+}
+
+if ($exit_code == 0) {
+    print "WashingtonDC exited successfully\n";
+} else {
+    print "WashingtonDC did not exit successfully (exit code is $exit_code)\n";
+}
 
 exit $exit_code
