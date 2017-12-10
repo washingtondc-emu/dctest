@@ -29,17 +29,27 @@
  ******************************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <setjmp.h>
+#include <stdarg.h>
 
 #include "sh4asm.h"
 
 #define INST_MAX 256
-uint16_t inst_list[INST_MAX];
-unsigned inst_count;
 
-static void flush_inst_list(void) {
+struct jit_ctxt {
+    uint16_t inst_list[INST_MAX];
+    unsigned inst_count;
+};
+
+struct jit_ctxt *cur_jit;
+
+static void flush_jit_ctxt(struct jit_ctxt *ctxt) {
     unsigned idx;
     for (idx = 0; idx < INST_MAX; idx++) {
-        uint16_t *ptr = inst_list + idx;
+        uint16_t *ptr = ctxt->inst_list + idx;
 
         asm volatile (
             "ocbwb @%0\n"
@@ -69,22 +79,131 @@ static void invalidate_icache(void) {
         "nop\n");
 }
 
-static void refresh_inst_list(void) {
-    flush_inst_list();
+static void refresh_jit_ctxt(struct jit_ctxt *ctxt) {
+    flush_jit_ctxt(ctxt);
     invalidate_icache();
 }
 
+static void emit_fn(uint16_t inst) {
+    if (cur_jit->inst_count < INST_MAX)
+        cur_jit->inst_list[cur_jit->inst_count++] = inst;
+    else
+        printf("ERROR: instruction overflow!\n");
+}
+
+static void clear_jit(struct jit_ctxt *ctxt) {
+    ctxt->inst_count = 0;
+    sh4asm_reset();
+}
+
+static void set_jit(struct jit_ctxt *ctxt) {
+    cur_jit = ctxt;
+    clear_jit(ctxt);
+}
+
 /*
- * TODO: the following instructions do not yet have tests implemented
+ * emit code to save all registers which should be preserved in the sh4
+ * calling convention.
+ *
+ * source: https://msdn.microsoft.com/en-us/library/ms925519.aspx
+ *         (hopefully this is the same in gnu as it is in Microsoft)
+ */
+static void emit_frame_open(void) {
+    sh4asm_input_string(
+        // r15 is always a stack pointer
+        "mov.l r8, @-r15\n"
+        "mov.l r9, @-r15\n"
+        "mov.l r10, @-r15\n"
+        "mov.l r11, @-r15\n"
+        "mov.l r12, @-r15\n"
+        "mov.l r13, @-r15\n"
+        "mov.l r14, @-r15\n"
+        );
+}
+
+/*
+ * restore the state which was previously saved
+ * by emit_frame_open.  This includes the return statement,
+ * so be sure to set r0 before calling this.
+ *
+ * Also make sure you undo any changes to r15 before calling this
+ */
+static void emit_frame_close(void) {
+    sh4asm_input_string(
+        "mov.l @r15+, r14\n"
+        "mov.l @r15+, r13\n"
+        "mov.l @r15+, r12\n"
+        "mov.l @r15+, r11\n"
+        "mov.l @r15+, r10\n"
+        "mov.l @r15+, r9\n"
+        "rts\n"
+        "mov.l @r15+, r8\n"
+        );
+}
+
+/*
+ * emit a function which will return the sr register.
+ * the emitted function will store sr in a random register, then
+ * return sr.
+ */
+static void emit_get_sr(void) {
+    // it's modulo 15 because r15 is the stack pointer, so we can't use that.
+    unsigned reg_no = rand() % 15;
+    printf("reg_no is %u\n", reg_no);
+    /* reg_no %= 15; */
+    /* printf("post-modulo, reg_no is %u\n", reg_no); */
+
+    emit_frame_open();
+    sh4asm_printf("stc sr, r%u\n", reg_no);
+    sh4asm_printf("mov r%u, r0\n", reg_no);
+    emit_frame_close();
+}
+
+// test CLRS and SETS
+static int test_clrs_sets(void) {
+    static struct jit_ctxt get_sr_ctxt;
+    memset(&get_sr_ctxt, 0, sizeof(get_sr_ctxt));
+
+    set_jit(&get_sr_ctxt);
+    emit_get_sr();
+
+    refresh_jit_ctxt(&get_sr_ctxt);
+    unsigned(*get_sr)(void) = (unsigned(*)(void))get_sr_ctxt.inst_list;
+
+    printf("\tsr is initially 0x%08x\n", get_sr());
+    asm volatile("clrs\n");
+    printf("\tafter clrs, sr is now 0x%08x\n", get_sr());
+    asm volatile("sets\n");
+    printf("\tafter sets, sr is now 0x%08x\n", get_sr());
+    asm volatile("clrs\n");
+    printf("\tafter clrs, sr is now 0x%08x\n", get_sr());
+
+    return 0;
+}
+
+#define TEST_CASE(fn) { .name = #fn, .test_fn = fn }
+
+static struct test_case {
+    char const *name;
+    int(*test_fn)(void);
+} const tests[] = {
+    TEST_CASE(test_clrs_sets),
+    { NULL }
+};
+
+/*
+ * The following instructions do not have tests of their own, but are
+ * implicitly tested by other tests:
  *
  * RTS
+ *
+ * TODO: the following instructions do not yet have tests implemented
+ *
  * CLRMAC
- * CLRS
  * CLRT
  * LDTLB
  * NOP
  * RTE
- * SETS
  * SETT
  * SLEEP
  * FRCHG
@@ -315,7 +434,38 @@ static void refresh_inst_list(void) {
  * FSRRA FRn
  */
 
+#define N_TESTS 8
+
+static jmp_buf error_point;
+
+__attribute__((__noreturn__)) static void
+error_handler(char const *fmt, va_list args) {
+    vprintf(fmt, args);
+    va_end(args);
+    longjmp(error_point, 1);
+}
+
 int main(int argc, char **argv) {
-    printf("PLUS ULTRA!\n");
+    struct test_case const *curs = tests;
+
+    if (setjmp(error_point) != 0) {
+        printf("ERROR: the test failed due to some critical error\n");
+        return 1;
+    }
+
+    sh4asm_set_error_handler(error_handler);
+    sh4asm_set_emitter(emit_fn);
+
+    while (curs->name) {
+        int test_no;
+        for (test_no = 0; test_no < N_TESTS; test_no++) {
+            printf("==== %s iteration %u ====\n", curs->name, test_no);
+            unsigned res = curs->test_fn();
+            printf("%s iteration %u: %s!\n",
+                   curs->name, test_no, res == 0 ? "SUCCESS" : "FAILURE");
+        }
+        curs++;
+    }
+
     return 0;
 }
