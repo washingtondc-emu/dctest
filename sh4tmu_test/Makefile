@@ -28,29 +28,28 @@
 #
 ################################################################################
 
-all:
-	make -C sh4div_test
-SUBDIRS =
+# SH4ASM_CORE_DIR = ../external/sh4asm/sh4asm_core
 
-# XXX this path a ../ at the beginning because it's relative to sh4div_test's
-# subdirectory
-SH4ASM_CORE_DIR = ../external/sh4asm/sh4asm_core
+ELFFILE = sh4tmu_test.elf
+BINFILE = sh4tmu_test.bin
+OBJS = sh4tmu_test.o # $(SH4ASM_OBJS)
+#CFLAGS = -I ../external/sh4asm/sh4asm_core/
+CFLAGS=
 
-SH4ASM_OBJS = $(SH4ASM_CORE_DIR)/sh4asm.o  $(SH4ASM_CORE_DIR)/parser.o      \
-	$(SH4ASM_CORE_DIR)/sh4_bin_emit.o $(SH4ASM_CORE_DIR)/sh4_asm_emit.o \
-	$(SH4ASM_CORE_DIR)/lexer.o   $(SH4ASM_CORE_DIR)/disas.o
-export SH4ASM_OBJS
-
-all: sh4div_test_rebuild sh4tmu_test_rebuild
-
-sh4div_test_rebuild:
-	make -C sh4div_test
-
-sh4tmu_test_rebuild:
-	make -C sh4tmu_test
-
-clean:
-	make -C sh4div_test clean
-	-rm -f $(SH4ASM_LIB) $(SH4ASM_OBJS)
+all: $(BINFILE)
 
 include $(KOS_BASE)/Makefile.rules
+
+clean:
+	rm -f $(ELFFILE) $(BINFILE) $(OBJS)
+
+$(BINFILE): $(ELFFILE)
+	sh-elf-objcopy -O binary $(ELFFILE) $(BINFILE)
+
+$(ELFFILE): $(OBJS)
+	$(KOS_CC) $(KOS_CFLAGS) $(CFLAGS) $(KOS_LDFLAGS) \
+	-o $(ELFFILE) $(KOS_START) $(OBJS) $(OBJEXTRA) $(KOS_LIBS)
+
+include $(KOS_BASE)/Makefile.rules
+
+$(ELFFILE): $(OBJS)
