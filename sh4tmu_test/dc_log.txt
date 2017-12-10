@@ -1,19 +1,3 @@
-Console enabled
-Upload <sh4tmu_test/sh4tmu_test.elf>
-File format is ELF, start address is 0x8c010000
-Section .text, lma 0x8c010000, size 201152
-Section .init, lma 0x8c0411c0, size 54
-Section .fini, lma 0x8c0411f8, size 42
-Section .rodata, lma 0x8c041224, size 32060
-Section .eh_frame, lma 0x8c048f60, size 116
-Section .ctors, lma 0x8c049054, size 8
-Section .dtors, lma 0x8c04905c, size 8
-Section .jcr, lma 0x8c049064, size 4
-Section .data, lma 0x8c049080, size 12164
-Section .got, lma 0x8c04c004, size 12
-transferred 245620 bytes at 345489.094603 bytes / sec
-Executing at <0x8c010000>
-Sending execute command (0x8c010000, console=1, cdfsredir=0)...executing
 
 --
 KallistiOS Git revision 374a47b: Sat Dec  9 14:10:47 PST 2017
