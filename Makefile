@@ -41,13 +41,16 @@ SH4ASM_OBJS = $(SH4ASM_CORE_DIR)/sh4asm.o  $(SH4ASM_CORE_DIR)/parser.o      \
 	$(SH4ASM_CORE_DIR)/lexer.o   $(SH4ASM_CORE_DIR)/disas.o
 export SH4ASM_OBJS
 
-all: sh4div_test_rebuild sh4tmu_test_rebuild
+all: sh4div_test_rebuild sh4tmu_test_rebuild sh4inst_test_rebuild
 
 sh4div_test_rebuild:
 	make -C sh4div_test
 
 sh4tmu_test_rebuild:
 	make -C sh4tmu_test
+
+sh4inst_test_rebuild:
+	make -C sh4inst_test
 
 clean:
 	make -C sh4div_test clean
