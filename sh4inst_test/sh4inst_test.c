@@ -181,6 +181,28 @@ static int test_clrs_sets(void) {
     return 0;
 }
 
+// test CLRT and SETT
+static int test_clrt_sett(void) {
+    static struct jit_ctxt get_sr_ctxt;
+    memset(&get_sr_ctxt, 0, sizeof(get_sr_ctxt));
+
+    set_jit(&get_sr_ctxt);
+    emit_get_sr();
+
+    refresh_jit_ctxt(&get_sr_ctxt);
+    unsigned(*get_sr)(void) = (unsigned(*)(void))get_sr_ctxt.inst_list;
+
+    printf("\tsr is initially 0x%08x\n", get_sr());
+    asm volatile("clrt\n");
+    printf("\tafter clrt, sr is now 0x%08x\n", get_sr());
+    asm volatile("sett\n");
+    printf("\tafter sett, sr is now 0x%08x\n", get_sr());
+    asm volatile("clrt\n");
+    printf("\tafter clrt, sr is now 0x%08x\n", get_sr());
+
+    return 0;
+}
+
 #define TEST_CASE(fn) { .name = #fn, .test_fn = fn }
 
 static struct test_case {
@@ -188,6 +210,7 @@ static struct test_case {
     int(*test_fn)(void);
 } const tests[] = {
     TEST_CASE(test_clrs_sets),
+    TEST_CASE(test_clrt_sett),
     { NULL }
 };
 
@@ -195,16 +218,15 @@ static struct test_case {
  * The following instructions do not have tests of their own, but are
  * implicitly tested by other tests:
  *
- * RTS
+ * RTS (every test)
+ * STC SR, Rn (test_clrs_sets, test_clrt_sett)
  *
  * TODO: the following instructions do not yet have tests implemented
  *
  * CLRMAC
- * CLRT
  * LDTLB
  * NOP
  * RTE
- * SETT
  * SLEEP
  * FRCHG
  * FSCHG
@@ -257,7 +279,6 @@ static struct test_case {
  * LDC Rm, SSR
  * LDC Rm, SPC
  * LDC Rm, DBR
- * STC SR, Rn
  * STC GBR, Rn
  * STC VBR, Rn
  * STC SSR, Rn
