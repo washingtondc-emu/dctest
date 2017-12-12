@@ -287,6 +287,44 @@ static int test_dt_rn(void) {
     return 0;
 }
 
+static int test_rotl_rn(void) {
+    static struct jit_ctxt rotl_ctxt;
+    bool whitelist[16] = { true, true, true, true, true, false, true, true,
+                           true, true, true, true, true, true, true, false };
+    unsigned reg_no = pick_reg(whitelist);
+
+    set_jit(&rotl_ctxt);
+
+    emit_frame_open();
+    sh4asm_printf("mov r4, r%u\n", reg_no);
+    sh4asm_printf("rotl r%u\n", reg_no);
+    sh4asm_printf("mov r%u, r0\n", reg_no);
+    sh4asm_printf("movt r4\n");
+    sh4asm_printf("mov.l r4, @r5\n");
+    emit_frame_close();
+
+    refresh_jit_ctxt(&rotl_ctxt);
+    unsigned(*test_fn)(unsigned,unsigned*) =
+        (unsigned(*)(unsigned,unsigned*))rotl_ctxt.inst_list;
+
+    unsigned t_flag;
+    unsigned res = test_fn(0x80000001, &t_flag);
+    printf("for input 0x80000001: result is 0x%08x, t=%u\n", res, t_flag);
+    if (res != 3 || !t_flag)
+        return -1;
+    res = test_fn(0x1, &t_flag);
+    printf("for input 0x00000001: result is 0x%08x, t=%u\n", res, t_flag);
+    if (res != 2 || t_flag)
+        return -1;
+    unsigned val = rand();
+    res = test_fn(val, &t_flag);
+    printf("for input 0x%08x: result is 0x%08x, t=%u\n", val, res, t_flag);
+    if (res != (val + val) || t_flag != (val & (1 << 31)))
+        return -1;
+
+    return 0;
+}
+
 #define TEST_CASE(fn) { .name = #fn, .test_fn = fn }
 
 static struct test_case {
@@ -296,6 +334,7 @@ static struct test_case {
     TEST_CASE(test_clrs_sets),
     TEST_CASE(test_clrt_sett),
     TEST_CASE(test_dt_rn),
+    TEST_CASE(test_rotl_rn),
     { NULL }
 };
 
@@ -314,11 +353,8 @@ static struct test_case {
  * NOP
  * RTE
  * SLEEP
- * FRCHG
- * FSCHG
  * CMP/PZ
  * CMP/PL
- * ROTL Rn
  * ROTR Rn
  * ROTCL Rn
  * ROTCR Rn
@@ -473,6 +509,8 @@ static struct test_case {
  * MOV.L @(disp, GBR), R0
  * MOVA @(disp, PC), R0
  * MOVCA.L R0, @Rn
+ * FRCHG
+ * FSCHG
  * FLDI0 FRn
  * FLDI1 Frn
  * FMOV FRm, FRn
