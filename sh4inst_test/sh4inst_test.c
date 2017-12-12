@@ -552,6 +552,7 @@ error_handler(char const *fmt, va_list args) {
 
 int main(int argc, char **argv) {
     struct test_case const *curs = tests;
+    unsigned n_success = 0, n_tests = 0;
 
     if (setjmp(error_point) != 0) {
         printf("ERROR: the test failed due to some critical error\n");
@@ -568,9 +569,13 @@ int main(int argc, char **argv) {
             unsigned res = curs->test_fn();
             printf("%s iteration %u: %s!\n",
                    curs->name, test_no, res == 0 ? "SUCCESS" : "FAILURE");
+            n_tests++;
+            if (res == 0)
+                n_success++;
         }
         curs++;
     }
+    printf("%d successes out of %d total trials\n", n_success, n_tests);
 
     return 0;
 }
