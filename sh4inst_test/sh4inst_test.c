@@ -149,12 +149,19 @@ static void emit_frame_close(void) {
 static void emit_get_sr(void) {
     // it's modulo 15 because r15 is the stack pointer, so we can't use that.
     unsigned reg_no = rand() % 15;
-    printf("reg_no is %u\n", reg_no);
-    /* reg_no %= 15; */
-    /* printf("post-modulo, reg_no is %u\n", reg_no); */
 
     emit_frame_open();
     sh4asm_printf("stc sr, r%u\n", reg_no);
+    sh4asm_printf("mov r%u, r0\n", reg_no);
+    emit_frame_close();
+}
+
+// emit a function which will obtain the t-bit using movt and return it.
+static void emit_get_t(void) {
+    // it's modulo 15 because r15 is the stack pointer, so we can't use that.
+    unsigned reg_no = rand() % 15;
+    emit_frame_open();
+    sh4asm_printf("movt r%u\n", reg_no);
     sh4asm_printf("mov r%u, r0\n", reg_no);
     emit_frame_close();
 }
@@ -183,22 +190,26 @@ static int test_clrs_sets(void) {
 
 // test CLRT and SETT
 static int test_clrt_sett(void) {
-    static struct jit_ctxt get_sr_ctxt;
-    memset(&get_sr_ctxt, 0, sizeof(get_sr_ctxt));
+    static struct jit_ctxt get_sr_ctxt, get_t_ctxt;
 
     set_jit(&get_sr_ctxt);
     emit_get_sr();
 
+    set_jit(&get_t_ctxt);
+    emit_get_t();
+
     refresh_jit_ctxt(&get_sr_ctxt);
+    refresh_jit_ctxt(&get_t_ctxt);
     unsigned(*get_sr)(void) = (unsigned(*)(void))get_sr_ctxt.inst_list;
+    unsigned(*get_t)(void) = (unsigned(*)(void))get_t_ctxt.inst_list;
 
     printf("\tsr is initially 0x%08x\n", get_sr());
     asm volatile("clrt\n");
-    printf("\tafter clrt, sr is now 0x%08x\n", get_sr());
+    printf("\tafter clrt, sr is now 0x%08x and t is %d\n", get_sr(), get_t());
     asm volatile("sett\n");
-    printf("\tafter sett, sr is now 0x%08x\n", get_sr());
+    printf("\tafter sett, sr is now 0x%08x and t is %d\n", get_sr(), get_t());
     asm volatile("clrt\n");
-    printf("\tafter clrt, sr is now 0x%08x\n", get_sr());
+    printf("\tafter clrt, sr is now 0x%08x and t is %d\n", get_sr(), get_t());
 
     return 0;
 }
@@ -220,6 +231,7 @@ static struct test_case {
  *
  * RTS (every test)
  * STC SR, Rn (test_clrs_sets, test_clrt_sett)
+ * MOVT Rn (test_clrt_sett)
  *
  * TODO: the following instructions do not yet have tests implemented
  *
@@ -230,7 +242,6 @@ static struct test_case {
  * SLEEP
  * FRCHG
  * FSCHG
- * MOVT Rn
  * CMP/PZ
  * CMP/PL
  * DT
