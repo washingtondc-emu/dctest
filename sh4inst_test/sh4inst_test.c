@@ -34,6 +34,7 @@
 #include <string.h>
 #include <setjmp.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #include "sh4asm.h"
 
@@ -141,6 +142,23 @@ static void emit_frame_close(void) {
         );
 }
 
+static int pick_reg(bool const whitelist[16]) {
+    unsigned reg_count = 0;
+    unsigned reg_idx;
+    for (reg_idx = 0; reg_idx < 16; reg_idx++)
+        if (whitelist[reg_idx])
+            reg_count++;
+    unsigned pick = rand() % reg_count;
+    for (reg_idx = 0; reg_idx < 16; reg_idx++)
+        if (whitelist[reg_idx]) {
+            if (!pick)
+                return reg_idx;
+            pick--;
+        }
+    printf("WARNING: REACHED END OF %s\n", __func__);
+    return 0;
+}
+
 /*
  * emit a function which will return the sr register.
  * the emitted function will store sr in a random register, then
@@ -214,6 +232,61 @@ static int test_clrt_sett(void) {
     return 0;
 }
 
+static int test_dt_rn(void) {
+    static struct jit_ctxt dt_rn_ctxt;
+    bool whitelist[16] = { true, true, true, true, true, false, true, true,
+                           true, true, true, true, true, true, true, false };
+    unsigned reg_no = pick_reg(whitelist);
+    whitelist[reg_no] = false;
+    set_jit(&dt_rn_ctxt);
+
+    emit_frame_open();
+    sh4asm_printf("mov r4, r%u\n", reg_no);
+    sh4asm_printf("dt r%u\n", reg_no);
+    sh4asm_printf("mov r%u, r0\n", reg_no);
+    sh4asm_printf("movt r4\n");
+    sh4asm_printf("mov.l r4, @r5\n");
+    emit_frame_close();
+
+    refresh_jit_ctxt(&dt_rn_ctxt);
+    unsigned(*dt_rn)(unsigned,unsigned*) =
+        (unsigned(*)(unsigned, unsigned*))dt_rn_ctxt.inst_list;
+
+    unsigned t_bit;
+    int dt_out = dt_rn(0, &t_bit);
+    printf("dt 0: output=0x%08x, t=0x%08x\n", dt_out, t_bit);
+    if (t_bit || dt_out != -1)
+        return -1;
+
+    dt_out = dt_rn(1, &t_bit);
+    printf("dt 1: output=0x%08x, t=0x%08x\n", dt_out, t_bit);
+    if (!t_bit || dt_out != 0)
+        return -1;
+
+    dt_out = dt_rn(2, &t_bit);
+    printf("dt 2: output=0x%08x, t=0x%08x\n", dt_out, t_bit);
+    if (t_bit || dt_out != 1)
+        return -1;
+
+    dt_out = dt_rn(-1, &t_bit);
+    printf("dt -1: output=0x%08x, t=0x%08x\n", dt_out, t_bit);
+    if (t_bit || dt_out != -2)
+        return -1;
+
+    int rand_input = rand();
+    dt_out = dt_rn(rand_input, &t_bit);
+    printf("dt 0x%08x: output=0x%08x, t=0x%08x\n", rand_input, dt_out, t_bit);
+    if (rand_input == 1) {
+        if (!t_bit || dt_out != 0)
+            return -1;
+    } else {
+        if (t_bit || dt_out != (rand_input - 1))
+            return -1;
+    }
+
+    return 0;
+}
+
 #define TEST_CASE(fn) { .name = #fn, .test_fn = fn }
 
 static struct test_case {
@@ -222,6 +295,7 @@ static struct test_case {
 } const tests[] = {
     TEST_CASE(test_clrs_sets),
     TEST_CASE(test_clrt_sett),
+    TEST_CASE(test_dt_rn),
     { NULL }
 };
 
@@ -231,7 +305,7 @@ static struct test_case {
  *
  * RTS (every test)
  * STC SR, Rn (test_clrs_sets, test_clrt_sett)
- * MOVT Rn (test_clrt_sett)
+ * MOVT Rn (test_clrt_sett, test_dt_rn)
  *
  * TODO: the following instructions do not yet have tests implemented
  *
@@ -244,7 +318,6 @@ static struct test_case {
  * FSCHG
  * CMP/PZ
  * CMP/PL
- * DT
  * ROTL Rn
  * ROTR Rn
  * ROTCL Rn
