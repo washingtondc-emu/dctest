@@ -319,7 +319,47 @@ static int test_rotl_rn(void) {
     unsigned val = rand();
     res = test_fn(val, &t_flag);
     printf("for input 0x%08x: result is 0x%08x, t=%u\n", val, res, t_flag);
-    if (res != (val + val) || t_flag != (val & (1 << 31)))
+    unsigned ms_bit = (val & (1 << 31)) >> 31;
+    if (res != ((val << 1) | ms_bit) || t_flag != ms_bit)
+        return -1;
+
+    return 0;
+}
+
+static int test_rotr_rn(void) {
+    static struct jit_ctxt rotr_ctxt;
+    bool whitelist[16] = { true, true, true, true, true, false, true, true,
+                           true, true, true, true, true, true, true, false };
+    unsigned reg_no = pick_reg(whitelist);
+
+    set_jit(&rotr_ctxt);
+
+    emit_frame_open();
+    sh4asm_printf("mov r4, r%u\n", reg_no);
+    sh4asm_printf("rotr r%u\n", reg_no);
+    sh4asm_printf("mov r%u, r0\n", reg_no);
+    sh4asm_printf("movt r4\n");
+    sh4asm_printf("mov.l r4, @r5\n");
+    emit_frame_close();
+
+    refresh_jit_ctxt(&rotr_ctxt);
+    unsigned(*test_fn)(unsigned,unsigned*) =
+        (unsigned(*)(unsigned,unsigned*))rotr_ctxt.inst_list;
+
+    unsigned t_flag;
+    unsigned res = test_fn(0x80000001, &t_flag);
+    printf("for input 0x80000001: result is 0x%08x, t=%u\n", res, t_flag);
+    if (res != 0xc0000000 || !t_flag)
+        return -1;
+    res = test_fn(0x80000000, &t_flag);
+    printf("for input 0x00000001: result is 0x%08x, t=%u\n", res, t_flag);
+    if (res != 0x40000000 || t_flag)
+        return -1;
+    unsigned val = rand();
+    res = test_fn(val, &t_flag);
+    printf("for input 0x%08x: result is 0x%08x, t=%u\n", val, res, t_flag);
+    unsigned ls_bit = val & 1;
+    if (res != ((val >> 1) | (ls_bit << 31)) || t_flag != ls_bit)
         return -1;
 
     return 0;
@@ -335,6 +375,7 @@ static struct test_case {
     TEST_CASE(test_clrt_sett),
     TEST_CASE(test_dt_rn),
     TEST_CASE(test_rotl_rn),
+    TEST_CASE(test_rotr_rn),
     { NULL }
 };
 
